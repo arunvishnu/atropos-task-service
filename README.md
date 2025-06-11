@@ -18,31 +18,6 @@ A simple API for managing long-running tasks with async processing.
 
 ## Quick Start
 
-### Local Development
-
-1. **Install Dependencies**
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. **Run the API**
-
-   ```bash
-   python -m app.main
-   ```
-
-   Or using uvicorn directly:
-
-   ```bash
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-   ```
-
-3. **Access the API**
-   - API: http://localhost:8000
-   - Swagger Docs: http://localhost:8000/docs
-   - ReDoc: http://localhost:8000/redoc
-
 ### Docker (Full Stack)
 
 1. **Build and Run**
@@ -55,24 +30,6 @@ A simple API for managing long-running tasks with async processing.
    - **Frontend**: http://localhost:3000
    - **API**: http://localhost:8000
    - **API Docs**: http://localhost:8000/docs
-
-### Frontend Only
-
-1. **Install Dependencies**
-
-   ```bash
-   cd frontend
-   npm install
-   ```
-
-2. **Run Development Server**
-
-   ```bash
-   npm run dev
-   ```
-
-3. **Access Frontend**
-   - http://localhost:3000
 
 ## API Endpoints
 
@@ -142,13 +99,12 @@ GET /tasks
 
 ## Development
 
-The service uses in-memory storage, so tasks will be lost when the service restarts. This is intentional for simplicity - we can add persistent storage later.
+The service uses postgreSQL for persistent storage.
 
 ## Production Considerations
 
 For production deployment, consider:
 
-- Adding persistent storage (Redis/PostgreSQL)
 - Implementing proper task queuing (Celery/RQ)
 - Adding authentication and authorization
 - Setting up proper logging and monitoring
