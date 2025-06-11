@@ -6,4 +6,10 @@ sqlalchemy==2.0.23
 psycopg2-binary==2.9.9
 alembic==1.13.0
 celery[redis]==5.3.4
-redis==4.6.0 
+redis==4.6.0
+
+# Testing dependencies
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2
+pytest-mock==3.12.0 

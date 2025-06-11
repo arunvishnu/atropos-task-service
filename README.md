@@ -25,46 +25,46 @@ A robust API for managing long-running tasks with distributed processing using C
 
 ## Configuration
 
-This project uses environment variables for configuration. Create a `.env` file in the root directory:
+This project uses environment variables for configuration. All variables have sensible defaults that work with Docker Compose out of the box.
 
-1. **Copy the example file:**
+**Optional:** Create a `.env` file in the root directory to customize values:
 
-   ```bash
-   cp .env.example .env
-   ```
+```env
+# Database Configuration
+DATABASE_URL=postgresql://atropos:atropos_dev@postgres:5432/atropos_tasks
 
-2. **Update the values as needed for your environment:**
+# Redis Configuration  
+REDIS_URL=redis://redis:6379/0
 
-   ```env
-   # Database Configuration
-   DATABASE_URL=postgresql://atropos:atropos_dev@postgres:5432/atropos_tasks
-   
-   # Redis Configuration  
-   REDIS_URL=redis://redis:6379/0
-   
-   # Celery Configuration
-   CELERY_BROKER_URL=redis://redis:6379/0
-   CELERY_RESULT_BACKEND=redis://redis:6379/0
-   
-   # Application Configuration
-   DEBUG=true
-   
-   # Frontend Configuration
-   NEXT_PUBLIC_API_URL=http://localhost:8000
-   ```
+# Celery Configuration
+CELERY_BROKER_URL=redis://redis:6379/0
+CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+# Application Configuration
+DEBUG=true
+
+# Frontend Configuration
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
 
 ## Quick Start
 
 ### Docker (Full Stack) - Recommended
 
-1. **Setup Environment**
+1. **Build and Run** (uses defaults, no setup needed)
 
    ```bash
-   cp .env.example .env
-   # Edit .env with your preferred values (defaults work for development)
+   docker-compose up --build
    ```
 
-2. **Build and Run**
+   *Optional: Create custom environment file if needed*
+   ```bash
+   # Create .env file with custom values (all variables have defaults)
+   # DATABASE_URL=postgresql://user:pass@host:5432/db
+   # REDIS_URL=redis://host:6379/0
+   ```
+
+2. **Access the Services**
 
    ```bash
    docker-compose up --build
@@ -226,6 +226,38 @@ GET /health
 - **Celery monitoring**: Built-in task monitoring and statistics
 - **Database**: All tasks are logged with timestamps and results
 
+## Testing
+
+The project includes basic API tests using pytest.
+
+### Running Tests
+
+1. **Create and activate virtual environment** (recommended):
+
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+2. **Install dependencies**:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Run the tests**:
+
+   ```bash
+   pytest
+   ```
+
+4. **Run with verbose output**:
+
+   ```bash
+   pytest -v
+   ```
+
+
 ## Scaling
 
 To scale the system:
@@ -243,11 +275,11 @@ To scale the system:
 
 ## Production Considerations
 
-- **Security**: Add authentication and authorization
-- **Environment variables**: Use proper secrets management
-- **Monitoring**: Add Prometheus/Grafana for metrics
-- **Load balancing**: Add nginx for API load balancing
-- **Database**: Use managed PostgreSQL service
-- **Redis**: Use managed Redis service with clustering
-- **Logging**: Centralized logging with ELK stack
-- **Backups**: Regular database backups
+- **Security**: Add API key authentication and rate limiting
+- **Environment variables**: Use proper secrets management (AWS Secrets Manager, etc.)
+- **Database**: Use managed PostgreSQL service (AWS RDS, Google Cloud SQL)
+- **Redis**: Use managed Redis service (AWS ElastiCache, Redis Cloud)
+- **Monitoring**: Add basic health checks and alerting
+- **Logging**: Structured logging with log aggregation
+- **Backups**: Automated database backups
+- **SSL/TLS**: HTTPS for all API endpoints

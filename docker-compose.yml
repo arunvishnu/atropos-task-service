@@ -38,10 +38,10 @@ services:
       - "8000:8000"
     environment:
       - DEBUG=${DEBUG:-false}
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
-      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
-      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://atropos:atropos_dev@postgres:5432/atropos_tasks}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
       - PYTHONPATH=/app
     volumes:
       - ./app:/app/app  # For development - mount source code
@@ -63,10 +63,10 @@ services:
     command: python -m celery -A app.worker worker --loglevel=info --concurrency=2
     environment:
       - DEBUG=${DEBUG:-false}
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
-      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
-      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://atropos:atropos_dev@postgres:5432/atropos_tasks}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
       - PYTHONPATH=/app
     volumes:
       - ./app:/app/app  # For development - mount source code
