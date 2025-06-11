@@ -9,8 +9,8 @@ app = FastAPI(
     title="Atropos Task Service",
     description="API for managing long-running tasks",
     version="1.0.0",
-    docs_url="/docs",  # Swagger UI
-    redoc_url="/redoc"  # ReDoc
+    docs_url=None,  # Disable Swagger UI
+    redoc_url="/docs"  # ReDoc at /docs
 )
 
 # Add CORS middleware for frontend integration
@@ -101,7 +101,7 @@ async def list_tasks():
     all_tasks = db.get_all_tasks()
     return {
         "total_tasks": len(all_tasks),
-        "tasks": [task.to_response() for task in all_tasks.values()]
+        "tasks": [task.to_response() for task in all_tasks]
     }
 
 if __name__ == "__main__":

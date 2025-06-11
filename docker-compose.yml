@@ -1,14 +1,35 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: atropos
+      POSTGRES_PASSWORD: atropos_dev
+      POSTGRES_DB: atropos_tasks
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atropos -d atropos_tasks"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   api:
     build: .
     ports:
       - "8000:8000"
     environment:
       - DEBUG=true
+      - DATABASE_URL=postgresql://atropos:atropos_dev@postgres:5432/atropos_tasks
     volumes:
       - ./app:/app/app  # For development - mount source code
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]
@@ -24,4 +45,7 @@ services:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
     depends_on:
       - api
-    restart: unless-stopped 
+    restart: unless-stopped
+
+volumes:
+  postgres_data: 
