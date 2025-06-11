@@ -18,17 +18,37 @@ services:
       timeout: 10s
       retries: 3
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   api:
     build: .
+    working_dir: /app
     ports:
       - "8000:8000"
     environment:
-      - DEBUG=true
-      - DATABASE_URL=postgresql://atropos:atropos_dev@postgres:5432/atropos_tasks
+      - DEBUG=${DEBUG:-false}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - PYTHONPATH=/app
     volumes:
       - ./app:/app/app  # For development - mount source code
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -37,15 +57,41 @@ services:
       timeout: 10s
       retries: 3
 
+  worker:
+    build: .
+    working_dir: /app
+    command: python -m celery -A app.worker worker --loglevel=info --concurrency=2
+    environment:
+      - DEBUG=${DEBUG:-false}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - PYTHONPATH=/app
+    volumes:
+      - ./app:/app/app  # For development - mount source code
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-m", "celery", "-A", "app.worker", "inspect", "ping"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
   frontend:
     build: ./frontend
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     depends_on:
       - api
     restart: unless-stopped
 
 volumes:
-  postgres_data: 
+  postgres_data:
+  redis_data: 

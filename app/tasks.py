@@ -1,46 +1,67 @@
-import asyncio
 import time
 import uuid
 from datetime import datetime
-from app.models import Task, TaskStatus
+from app.celery_app import celery_app
+from app.models import TaskStatus
 from app.database import db
 
-async def process_task_async(task: Task):
-    """Process a task asynchronously in the background"""
+@celery_app.task(bind=True)
+def process_task(self, task_id: str):
+    """
+    Main Celery task that processes different types of tasks
+    
+    Args:
+        task_id: The ID of the task to process
+    """
     try:
+        # Get task from database
+        task = db.get_task(task_id)
+        if not task:
+            self.retry(countdown=60, max_retries=3)
+            return
+        
         # Update task status to processing
         task.status = TaskStatus.PROCESSING
         db.update_task(task)
         
-        # Simulate different types of long-running tasks
+        # Process based on task type
         if task.task_type == "data_processing":
-            result = await simulate_data_processing(task.parameters)
+            result = simulate_data_processing(task.parameters)
         elif task.task_type == "report_generation":
-            result = await simulate_report_generation(task.parameters)
+            result = simulate_report_generation(task.parameters)
         elif task.task_type == "video_processing":
-            result = await simulate_video_processing(task.parameters)
+            result = simulate_video_processing(task.parameters)
         else:
             # Default task processing
-            result = await simulate_default_task(task.parameters)
+            result = simulate_default_task(task.parameters)
         
         # Mark task as completed
         task.status = TaskStatus.COMPLETED
         task.result = result
         task.completed_at = datetime.utcnow()
-        
-    except Exception as e:
-        # Mark task as failed
-        task.status = TaskStatus.FAILED
-        task.error = str(e)
-        task.completed_at = datetime.utcnow()
-    
-    finally:
         db.update_task(task)
+        
+        return result
+        
+    except Exception as exc:
+        # Mark task as failed
+        task = db.get_task(task_id)
+        if task:
+            task.status = TaskStatus.FAILED
+            task.error = str(exc)
+            task.completed_at = datetime.utcnow()
+            db.update_task(task)
+        
+        # Retry the task if retries are available
+        if self.request.retries < self.max_retries:
+            self.retry(countdown=60, exc=exc)
+        else:
+            raise exc
 
-async def simulate_data_processing(parameters: dict):
+def simulate_data_processing(parameters: dict):
     """Simulate data processing task"""
     processing_time = parameters.get("processing_time", 10)  # Default 10 seconds
-    await asyncio.sleep(processing_time)
+    time.sleep(processing_time)
     
     return {
         "processed_records": parameters.get("record_count", 1000),
@@ -48,12 +69,12 @@ async def simulate_data_processing(parameters: dict):
         "output_file": f"processed_data_{uuid.uuid4().hex[:8]}.csv"
     }
 
-async def simulate_report_generation(parameters: dict):
+def simulate_report_generation(parameters: dict):
     """Simulate report generation task"""
     report_type = parameters.get("report_type", "monthly")
     processing_time = parameters.get("processing_time", 15)  # Default 15 seconds
     
-    await asyncio.sleep(processing_time)
+    time.sleep(processing_time)
     
     return {
         "report_type": report_type,
@@ -62,12 +83,12 @@ async def simulate_report_generation(parameters: dict):
         "report_url": f"https://reports.example.com/{uuid.uuid4().hex[:8]}.pdf"
     }
 
-async def simulate_video_processing(parameters: dict):
+def simulate_video_processing(parameters: dict):
     """Simulate video processing task"""
     video_length = parameters.get("video_length", 60)  # seconds
     processing_time = video_length * 0.5  # Simulate processing takes half the video length
     
-    await asyncio.sleep(processing_time)
+    time.sleep(processing_time)
     
     return {
         "original_length": video_length,
@@ -77,10 +98,10 @@ async def simulate_video_processing(parameters: dict):
         "video_url": f"https://videos.example.com/{uuid.uuid4().hex[:8]}.mp4"
     }
 
-async def simulate_default_task(parameters: dict):
+def simulate_default_task(parameters: dict):
     """Default task simulation"""
     processing_time = parameters.get("processing_time", 5)  # Default 5 seconds
-    await asyncio.sleep(processing_time)
+    time.sleep(processing_time)
     
     return {
         "message": "Task completed successfully",
@@ -88,6 +109,6 @@ async def simulate_default_task(parameters: dict):
         "timestamp": datetime.utcnow().isoformat()
     }
 
-def start_background_task(task: Task):
-    """Start a background task"""
-    asyncio.create_task(process_task_async(task)) 
+def start_background_task(task_id: str):
+    """Start a background task using Celery"""
+    return process_task.delay(task_id) 

@@ -4,6 +4,7 @@ import uuid
 from app.models import TaskCreate, TaskResponse, Task
 from app.database import db
 from app.tasks import start_background_task
+from app.celery_app import celery_app
 
 app = FastAPI(
     title="Atropos Task Service",
@@ -30,6 +31,33 @@ async def root():
         "version": "1.0.0",
         "docs": "/docs"
     }
+
+@app.get("/health")
+async def health_check():
+    """Detailed health check including Celery status"""
+    try:
+        # Check Celery workers
+        stats = celery_app.control.inspect().stats()
+        active_workers = len(stats) if stats else 0
+        
+        # Check database connection
+        db_status = "connected"
+        try:
+            db.get_all_tasks()
+        except Exception:
+            db_status = "error"
+        
+        return {
+            "status": "healthy",
+            "database": db_status,
+            "celery_workers": active_workers,
+            "message": f"API running with {active_workers} Celery workers"
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e)
+        }
 
 @app.post("/tasks", response_model=TaskResponse)
 async def create_task(task_data: TaskCreate):
@@ -59,8 +87,8 @@ async def create_task(task_data: TaskCreate):
     # Store task in database
     db.create_task(task)
     
-    # Start background processing
-    start_background_task(task)
+    # Start background processing with Celery
+    start_background_task(task.id)
     
     return task.to_response()
 
