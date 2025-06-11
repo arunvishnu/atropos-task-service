@@ -15,7 +15,7 @@ export default function Home() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
-  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
