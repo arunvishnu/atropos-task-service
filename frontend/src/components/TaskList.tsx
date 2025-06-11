@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Task, getTaskStatus, getTaskResult } from '../lib/api';
+import { Task, getTaskStatus, getTaskResult, deleteTask } from '../lib/api';
 import React from 'react';
 
 interface TaskListProps {
@@ -13,6 +13,7 @@ export default function TaskList({ tasks, onRefresh }: TaskListProps) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const handleCheckStatus = async (taskId: string) => {
     setLoading(true);
@@ -42,6 +43,21 @@ export default function TaskList({ tasks, onRefresh }: TaskListProps) {
     }
   };
 
+  const handleDelete = async (taskId: string) => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      await deleteTask(taskId);
+      setDeleteConfirm(null);
+      onRefresh(); // Refresh the task list after deletion
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete task');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return '#ffc107';
@@ -50,6 +66,10 @@ export default function TaskList({ tasks, onRefresh }: TaskListProps) {
       case 'failed': return '#dc3545';
       default: return '#6c757d';
     }
+  };
+
+  const canDelete = (task: Task) => {
+    return task.status === 'completed' || task.status === 'failed';
   };
 
   return (
@@ -72,7 +92,16 @@ export default function TaskList({ tasks, onRefresh }: TaskListProps) {
 
       <div style={{ display: 'grid', gap: '15px' }}>
         {tasks.map((task) => (
-          <div key={task.id} style={{ border: '1px solid #ddd', padding: '15px', borderRadius: '5px' }}>
+          <div 
+            key={task.id} 
+            style={{ 
+              border: '1px solid #ddd', 
+              padding: '15px', 
+              borderRadius: '5px',
+              opacity: task.deleted_at ? 0.6 : 1,
+              backgroundColor: task.deleted_at ? '#f8f9fa' : 'white'
+            }}
+          >
             <div style={{ marginBottom: '10px' }}>
               <strong>ID:</strong> {task.id}
             </div>
@@ -88,10 +117,20 @@ export default function TaskList({ tasks, onRefresh }: TaskListProps) {
               }}>
                 {task.status}
               </span>
+              {task.deleted_at && (
+                <span style={{ color: '#dc3545', marginLeft: '10px', fontSize: '12px' }}>
+                  (DELETED)
+                </span>
+              )}
             </div>
-            <div style={{ marginBottom: '15px' }}>
+            <div style={{ marginBottom: '10px' }}>
               <strong>Created:</strong> {new Date(task.created_at).toLocaleString()}
             </div>
+            {task.deleted_at && (
+              <div style={{ marginBottom: '10px' }}>
+                <strong>Deleted:</strong> {new Date(task.deleted_at).toLocaleString()}
+              </div>
+            )}
             
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
@@ -120,10 +159,88 @@ export default function TaskList({ tasks, onRefresh }: TaskListProps) {
               >
                 Get Result
               </button>
+              {canDelete(task) && !task.deleted_at && (
+                <button
+                  onClick={() => setDeleteConfirm(task.id)}
+                  disabled={loading}
+                  style={{ 
+                    padding: '5px 10px', 
+                    backgroundColor: '#dc3545', 
+                    color: 'white', 
+                    border: 'none', 
+                    cursor: loading ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  Delete
+                </button>
+              )}
             </div>
           </div>
         ))}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirm && (
+        <>
+          <div 
+            style={{ 
+              position: 'fixed', 
+              top: 0, 
+              left: 0, 
+              right: 0, 
+              bottom: 0, 
+              backgroundColor: 'rgba(0,0,0,0.5)', 
+              zIndex: 1000 
+            }}
+            onClick={() => setDeleteConfirm(null)}
+          />
+          <div style={{ 
+            position: 'fixed', 
+            top: '50%', 
+            left: '50%', 
+            transform: 'translate(-50%, -50%)',
+            backgroundColor: 'white', 
+            border: '2px solid #ccc', 
+            padding: '20px', 
+            borderRadius: '5px',
+            zIndex: 1001,
+            minWidth: '300px'
+          }}>
+            <h3 style={{ marginTop: 0 }}>Confirm Delete</h3>
+            <p>Are you sure you want to delete this task?</p>
+            <p style={{ fontSize: '12px', color: '#6c757d' }}>
+              Task ID: {deleteConfirm}
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                style={{ 
+                  padding: '8px 16px', 
+                  backgroundColor: '#6c757d', 
+                  color: 'white', 
+                  border: 'none', 
+                  cursor: 'pointer' 
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(deleteConfirm)}
+                disabled={loading}
+                style={{ 
+                  padding: '8px 16px', 
+                  backgroundColor: '#dc3545', 
+                  color: 'white', 
+                  border: 'none', 
+                  cursor: loading ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {loading ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {selectedTask && (
         <div style={{ 
@@ -167,6 +284,11 @@ export default function TaskList({ tasks, onRefresh }: TaskListProps) {
           {selectedTask.completed_at && (
             <div style={{ marginBottom: '10px' }}>
               <strong>Completed:</strong> {new Date(selectedTask.completed_at).toLocaleString()}
+            </div>
+          )}
+          {selectedTask.deleted_at && (
+            <div style={{ marginBottom: '10px' }}>
+              <strong>Deleted:</strong> {new Date(selectedTask.deleted_at).toLocaleString()}
             </div>
           )}
           

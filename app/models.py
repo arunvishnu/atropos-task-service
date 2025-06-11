@@ -22,6 +22,7 @@ class TaskResponse(BaseModel):
     error: Optional[str] = None
     created_at: datetime
     completed_at: Optional[datetime] = None
+    deleted_at: Optional[datetime] = None
 
 class Task:
     def __init__(self, id: str, task_type: str, parameters: dict):
@@ -33,6 +34,7 @@ class Task:
         self.error = None
         self.created_at = datetime.utcnow()
         self.completed_at = None
+        self.deleted_at = None
 
     def to_response(self) -> TaskResponse:
         return TaskResponse(
@@ -43,5 +45,6 @@ class Task:
             result=self.result,
             error=self.error,
             created_at=self.created_at,
-            completed_at=self.completed_at
+            completed_at=self.completed_at,
+            deleted_at=self.deleted_at
         ) 

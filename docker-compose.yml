@@ -88,6 +88,11 @@ services:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    volumes:
+      - ./frontend/src:/app/src  # Mount source code for development
+      - ./frontend/public:/app/public  # Mount public assets
+      - /app/node_modules  # Prevent overwriting node_modules
+      - /app/.next  # Prevent overwriting .next build cache
     depends_on:
       - api
     restart: unless-stopped
